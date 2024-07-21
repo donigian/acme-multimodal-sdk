@@ -26,7 +26,7 @@ README = (HERE / "README.md").read_text()
 VERSION = get_version("multimodal/src/version.py")
 
 setup(
-    name="multimodal",
+    name="acme-multimodal-sdk",
     description="Multimodal SDK.",
     long_description_content_type="text/markdown",
     long_description=README,
