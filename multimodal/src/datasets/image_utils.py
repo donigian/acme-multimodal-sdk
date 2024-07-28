@@ -41,6 +41,12 @@ class ImageUtils:
     self.image_examiner = Imagelab(data_path=self.image_dir)
     self.image_examiner.find_issues(issue_types=self.issue_types)
 
+  def visualize_images_with_issues():
+    """
+    Produce a report with issues found in images
+    """
+    return self.image_examiner.report(issue_types=self.issue_types)
+
   def report_image_issue_types_found(self) -> pd.DataFrame:
     """
     Finds different types of issues commonly found in images.
