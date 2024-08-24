@@ -1,7 +1,10 @@
 import os
 import pandas as pd
+from PIL import Image
 from typing import List, Set
+from collections import namedtuple
 
+from datasets import load_dataset
 from cleanvision import Imagelab
 
 class ImageUtils:
@@ -14,7 +17,11 @@ class ImageUtils:
     self.image_examiner = None
     self.file_to_issue_map = {}
     self.all_images = []
+    self.formatted_dataset = None
+    self.formatted_train_dataset = None
+    self.formatted_test_dataset = None
     self.images_no_issues = None
+    self.labels = []
     self.issue_types = {"dark": {}, "blurry": {}, "exact_duplicates": {},
               "near_duplicates": {"hash_type": "phash"}, "low_information": {}, "light": {},
               "grayscale": {}, "odd_aspect_ratio": {}}  
@@ -81,14 +88,48 @@ class ImageUtils:
     """
     pass
 
-  def labels_to_dataset(self):
+  def generate_labels(self, set_name: str, prompt_to_create_label: str):
     """
-    Converts labels to dataset.
+    Create labels for dataset.
 
     Returns:
       A dataset of labels.
     """
-    pass
+    # Define a namedtuple
+    Scene = namedtuple('Scene', ['image', 'caption', 'label'])
+
+    # Create namedtuple instances
+    if set_name == 'train':
+      dataset = self.formatted_train_dataset
+    else:
+      dataset = self.formatted_test_dataset
+
+    for example in dataset:
+      # Access elements of each example, e.g.,
+      image = example['image']
+      caption = example['caption']
+
+      question = prompt_to_create_label
+      prompt = f"Question: {question} Answer:" 
+
+      inputs = processor(image, text=prompt, return_tensors="pt").to(device, torch.float16)
+
+      generated_ids = model.generate(**inputs, max_new_tokens=10)
+      contains_human_or_not = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+      self.labels.append(Scene(image, caption, contains_human_or_not))
+
+  def create_formatted_dataset(self, train_test_ration=0.20):
+    """
+    Create an Arrow formatted dataset.
+
+    Returns:
+      None.
+    """
+    self.formatted_dataset = load_dataset("imagefolder", data_dir=self.image_dir)
+    train_test_split = self.formatted_dataset["train"].train_test_split(test_size=train_test_ration)
+    self.formatted_train_dataset = train_test_split["train"]
+    self.formatted_test_dataset = train_test_split["test"]
+
 
   def _remove_prefix_from_set(self, original_set, prefix="/content/images/") -> Set:
     """Removes the given prefix from each string in the set.
